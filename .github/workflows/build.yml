@@ -11,42 +11,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Unzip project
-        run: |
-          mkdir -p maschat_extracted
-          unzip maschat.zip -d maschat_extracted
-
-      - name: Find project root
-        id: find_root
-        run: |
-          cd maschat_extracted
-          if [ -f "pubspec.yaml" ]; then
-            echo "path=." >> $GITHUB_OUTPUT
-          else
-            DIR=$(find . -name "pubspec.yaml" -maxdepth 3 -exec dirname {} \; | head -n 1)
-            echo "path=$DIR" >> $GITHUB_OUTPUT
-          fi
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'any'
+          flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Ultimate Bypass and Build APK
-        run: |
-          cd maschat_extracted/${{ steps.find_root.outputs.path }}
-          # Remove any conflicting packages completely from pubspec.yaml
-          if [ -f "pubspec.yaml" ]; then
-            sed -i '/image_picker/d' pubspec.yaml
-            sed -i '/url_launcher/d' pubspec.yaml
-          fi
-          flutter clean
-          flutter pub get --no-example
-          flutter build apk --release --no-pub
+      - name: Get Dependencies
+        run: flutter pub get
 
-      - name: Upload APK
+      - name: Build APK Release
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: maschat_extracted/**/build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+```eof
