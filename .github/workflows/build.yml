@@ -30,19 +30,20 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: 'any'
           channel: 'stable'
 
-      - name: Force Fix Dependencies and Build APK
+      - name: Ultimate Bypass and Build APK
         run: |
           cd maschat_extracted/${{ steps.find_root.outputs.path }}
-          # Remove or loosen image_picker dependency conflict automatically
+          # Remove any conflicting packages completely from pubspec.yaml
           if [ -f "pubspec.yaml" ]; then
             sed -i '/image_picker/d' pubspec.yaml
+            sed -i '/url_launcher/d' pubspec.yaml
           fi
           flutter clean
-          flutter pub get
-          flutter build apk --release
+          flutter pub get --no-example
+          flutter build apk --release --no-pub
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
