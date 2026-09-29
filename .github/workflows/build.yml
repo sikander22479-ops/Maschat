@@ -23,7 +23,6 @@ jobs:
           if [ -f "pubspec.yaml" ]; then
             echo "path=." >> $GITHUB_OUTPUT
           else
-            # Find the directory containing pubspec.yaml
             DIR=$(find . -name "pubspec.yaml" -maxdepth 3 -exec dirname {} \; | head -n 1)
             echo "path=$DIR" >> $GITHUB_OUTPUT
           fi
@@ -31,12 +30,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.19.0'
           channel: 'stable'
 
       - name: Build APK
         run: |
           cd maschat_extracted/${{ steps.find_root.outputs.path }}
+          flutter clean
           flutter pub get
           flutter build apk --release
 
