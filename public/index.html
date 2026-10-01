@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maschat Meet - Live Video Call</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { color: #333; }
+        #room-selection {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #0056b3; }
+        #video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+        video {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            background-color: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Maschat Video Meeting</h2>
+    
+    <div id="room-selection">
+        <input type="text" id="room-input" placeholder="Enter Room Name">
+        <button id="join-btn">Join Room</button>
+    </div>
+
+    <div id="video-grid"></div>
+
+    <script>
+        const socket = io();
+        const videoGrid = document.getElementById('video-grid');
+        const myVideo = document.createElement('video');
+        myVideo.muted = true;
+
+        let myVideoStream;
+
+        navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        }).then(stream => {
+            myVideoStream = stream;
+            addVideoStream(myVideo, stream);
+
+            document.getElementById('join-btn').addEventListener('click', () => {
+                const roomName = document.getElementById('room-input').value;
+                if (!roomName) {
+                    alert('Please enter a room name!');
+                    return;
+                }
+                document.getElementById('room-selection').style.display = 'none';
+                socket.emit('join-room', roomName, socket.id);
+            });
+        }).catch(error => {
+            console.error('Error accessing media devices:', error);
+            alert('Please allow camera and microphone permissions!');
+        });
+
+        socket.on('user-connected', userId => {
+            console.log('User connected: ' + userId);
+            alert('New user joined the meeting!');
+        });
+
+        function addVideoStream(video, stream) {
+            video.srcObject = stream;
+            video.addEventListener('loadedmetadata', () => {
+                video.play();
+            });
+            videoGrid.append(video);
+        }
+    </script>
+</body>
+</html>
