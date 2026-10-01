@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Maschat - Real Family & Friends Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'maschat-live-app';
+
+        window.db = db;
+        window.auth = auth;
+        window.storage = storage;
+        window.appId = appId;
+        window.FirebaseSDK = { collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, ref, uploadBytes, getDownloadURL };
+
+        signInAnonymously(auth).then(() => {
+            console.log("Maschat Cloud Connected!");
+            checkUserIdentity();
+            initRealtimeChat();
+        }).catch(err => console.error("Auth error:", err));
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0b141a; }
+        ::-webkit-scrollbar-thumb { background: #222e35; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Modal for Name Setup -->
+    <div id="nameModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl">
+            <h2 class="text-base font-bold text-teal-400 flex items-center space-x-2">
+                <i class="fa-solid fa-user-pen"></i>
+                <span>अपना नाम दर्ज करें</span>
+            </h2>
+            <p class="text-xs text-slate-400">रिश्तेदारों और दोस्तों को चैट में आपका सही नाम दिखेगा।</p>
+            <input type="text" id="usernameInput" placeholder="जैसे: सिकंदर भाई" class="w-full bg-slate-950 text-slate-100 px-4 py-2.5 rounded-xl text-xs border border-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500">
+            <button onclick="saveUsername()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold py-2.5 rounded-xl text-xs transition cursor-pointer shadow">
+                चैट में प्रवेश करें 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Header -->
+    <header class="bg-[#075E54] text-white px-3 py-2.5 flex justify-between items-center shadow-lg z-20 shrink-0">
+        <div class="flex items-center space-x-2.5 overflow-hidden">
+            <div class="w-9 h-9 rounded-full bg-teal-800 flex items-center justify-center font-bold text-base shadow-inner border border-teal-500 shrink-0">
+                <i class="fa-solid fa-globe text-amber-400"></i>
+            </div>
+            <div class="truncate">
+                <h1 class="text-xs md:text-sm font-bold tracking-wide leading-tight truncate">Maschat Network 🌐</h1>
+                <p id="currentIdentityDisplay" class="text-[9px] text-teal-200 truncate">यूज़र: लोड हो रहा है...</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-1.5 shrink-0">
+            <button onclick="switchTab('chat')" id="tabChatBtn" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-teal-900 text-white transition flex items-center space-x-1 cursor-pointer shadow">
+                <i class="fa-solid fa-comments"></i> <span>चैट</span>
+            </button>
+            <button onclick="switchTab('meeting')" id="tabMeetingBtn" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-teal-800/60 hover:bg-teal-800 text-teal-100 transition flex items-center space-x-1 cursor-pointer">
+                <i class="fa-solid fa-video"></i> <span>मीटिंग</span>
+            </button>
+            <button id="realInstallBtn" onclick="installApp()" class="hidden px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition flex items-center space-x-1 cursor-pointer shadow">
+                <i class="fa-solid fa-download"></i> <span>इन्स्टॉल</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex overflow-hidden relative w-full">
+        
+        <!-- 1. CHAT SECTION -->
+        <section id="chatSection" class="flex-1 flex flex-col bg-[#0b141a] h-full w-full">
+            <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center font-bold text-xs text-white shadow">💬</div>
+                    <div>
+                        <h3 class="font-semibold text-xs text-slate-100">सार्वजनिक मित्र और रिश्तेदार मंच</h3>
+                        <span class="text-[9px] text-emerald-400 font-medium">✨ फोटो, वीडियो और संदेशों का आदान-प्रदान</span>
+                    </div>
+                </div>
+                <button onclick="openNameModal()" class="text-[10px] text-teal-400 bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:bg-slate-700 transition cursor-pointer">
+                    नाम बदलें
+                </button>
+            </div>
+
+            <!-- Messages Stream Container -->
+            <div id="cloudMessageContainer" class="flex-1 p-3 md:p-5 overflow-y-auto space-y-3">
+                <div class="flex justify-center">
+                    <div class="bg-slate-900 text-slate-400 px-4 py-2 rounded-xl text-xs shadow border border-slate-800 text-center max-w-sm">
+                        🔄 संदेश सिंक हो रहे हैं...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input & Send Bar -->
+            <div class="bg-slate-900 p-2.5 md:p-3 flex items-center space-x-2 border-t border-slate-800 shrink-0">
+                <label class="bg-slate-800 hover:bg-slate-700 text-teal-400 px-3 py-2 rounded-xl text-xs md:text-sm cursor-pointer transition flex items-center justify-center" title="फोटो या वीडियो भेजें">
+                    <i class="fa-solid fa-paperclip"></i>
+                    <input type="file" id="mediaFileInput" class="hidden" onchange="uploadAndSendMedia(this)">
+                </label>
+                
+                <input type="text" id="cloudMessageInput" placeholder="रिश्तेदारों को संदेश भेजें..." class="flex-1 bg-slate-950 text-slate-100 px-3.5 py-2 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-slate-800" onkeypress="if(event.key==='Enter') sendCloudMessage()">
+                
+                <button onclick="sendCloudMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-semibold cursor-pointer shadow transition">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. LIVE MEETING SECTION -->
+        <section id="meetingSection" class="hidden flex-1 flex flex-col bg-slate-950 w-full h-full p-3 md:p-6 overflow-y-auto">
+            <div class="max-w-4xl mx-auto w-full space-y-4">
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="space-y-0.5 text-center sm:text-left">
+                        <h2 class="text-base md:text-lg font-bold text-blue-400 flex items-center justify-center sm:justify-start space-x-2">
+                            <i class="fa-solid fa-video text-blue-500"></i>
+                            <span>Maschat लाइव वीडियो मीटिंग</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-400">कैमरा चालू करके सीधे वीडियो कॉल का आनंद लें।</p>
+                    </div>
+                    <button onclick="startRealCamera()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-xs shadow cursor-pointer transition">
+                        कैमरा चालू करें
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 aspect-video rounded-xl border border-slate-800 relative flex flex-col items-center justify-center shadow-inner overflow-hidden max-w-2xl mx-auto w-full">
+                    <video id="webcamVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                    <div id="cameraPlaceholder" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center space-y-2 p-4">
+                        <i class="fa-solid fa-video-slash text-3xl text-slate-600"></i>
+                        <p class="text-xs text-slate-400 font-medium">कैमरा बंद है</p>
+                    </div>
+                    <div class="absolute bottom-3 left-3 bg-black/75 px-3 py-1 rounded-lg text-xs text-white flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="meetingHostName">यूज़र (Host)</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-center items-center space-x-3 max-w-2xl mx-auto w-full">
+                    <button onclick="toggleAudio()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 cursor-pointer transition">
+                        <i class="fa-solid fa-microphone text-emerald-400" id="micIcon"></i> <span id="muteText">म्यूट</span>
+                    </button>
+                    <button onclick="toggleVideo()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 cursor-pointer transition">
+                        <i class="fa-solid fa-video text-blue-400" id="camIcon"></i> <span id="vidText">कैमरा बंद</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Script Engine -->
+    <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('realInstallBtn').classList.remove('hidden');
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('realInstallBtn').classList.add('hidden');
+                }
+                deferredPrompt = null;
+            } else {
+                alert("यह ऐप पहले से स्थापित है या ब्राउज़र डायरेक्ट अनुमति नहीं दे रहा है।");
+            }
+        }
+
+        function checkUserIdentity() {
+            l
