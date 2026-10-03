@@ -25,15 +25,13 @@ jobs:
         channel: 'stable'
 
     - name: Get Dependencies
-      working-directory: Maschat-meet
       run: flutter pub get
 
     - name: Build Release APK
-      working-directory: Maschat-meet
       run: flutter build apk --release
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: release-apk
-        path: Maschat-meet/build/app/outputs/flutter-apk/app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
