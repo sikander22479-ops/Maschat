@@ -1,5 +1,5 @@
 name: maschat
-description: "A complete unified engine for Maschat featuring WhatsApp chat, Telegram file sharing, and Zoom video meetings."
+description: "A new Flutter project for Maschat Meet and Chat."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,25 +10,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
 
-  # --- डेटाबेस और बैकएंड इंजन (WhatsApp & Telegram स्टाइल सिंक) ---
-  firebase_core: ^3.6.0
-  cloud_firestore: ^5.4.4
-  firebase_storage: ^12.3.4
-
-  # --- मीडिया, वीडियो और फाइल पिकर इंजन (Telegram मीडिया शेयरिंग) ---
-  file_picker: ^8.0.0
-  image_picker: ^1.1.2
-
-  # --- वीडियो मीटिंग इंजन (Zoom स्टाइल वीडियो कॉलिंग) ---
-  flutter_webrtc: ^0.9.48
-  permission_handler: ^11.3.1
+  # असली वीडियो मीटिंग और चैटिंग के लिए लाइव पैकेजेस
+  agora_rtc_engine: ^6.3.0
+  permission_handler: ^11.0.1
+  http: ^1.1.0
+  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
+
+  # assets:
+  #   - images/
